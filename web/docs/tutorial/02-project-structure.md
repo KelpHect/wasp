@@ -13,7 +13,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 
     After creating a new Wasp project and renaming the `src/MainPage.tsx` file, your project should look like this:
 
-    ```
+    ```python
     .
     ├── .gitignore
     ├── main.wasp     # Your Wasp code goes here.
@@ -35,7 +35,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
   <TabItem value="ts" label="TypeScript">
     After creating a new Wasp project, your project should look like this:
 
-    ```
+    ```python
     .
     ├── .gitignore
     ├── main.wasp     # Your Wasp code goes here.
