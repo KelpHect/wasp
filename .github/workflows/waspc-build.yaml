@@ -93,6 +93,18 @@ jobs:
             # fine depending on it.
             static: false
 
+          - name: windows-x86_64
+            runner: windows-latest
+            static: false
+            install-deps: |
+              Invoke-WebRequest -Uri 'https://downloads.sourceforge.net/project/gnuwin32/zlib/1.2.3/zlib-1.2.3-bin.zip' -OutFile 'zlib-bin.zip'
+              Invoke-WebRequest -Uri 'https://downloads.sourceforge.net/project/gnuwin32/zlib/1.2.3/zlib-1.2.3-lib.zip' -OutFile 'zlib-lib.zip'
+              Expand-Archive -Path 'zlib-bin.zip' -DestinationPath 'zlib'
+              Expand-Archive -Path 'zlib-lib.zip' -DestinationPath 'zlib'
+              echo "CPATH=$((Get-Item -Path 'zlib/include').FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+              echo "LIBRARY_PATH=$((Get-Item -Path 'zlib/lib').FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+              echo "$((Get-Item -Path 'zlib/bin').FullName)" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
           - name: macos-aarch64
             runner: macos-latest # Latest macOS images are already Apple Silicon-based
             static: false # Check the comment above for why we can't statically link on macOS
@@ -112,6 +124,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
+        if: matrix.env.install-deps
+        shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
         run: ${{ matrix.env.install-deps }}
 
       - uses: ./.github/actions/setup-haskell
@@ -124,7 +138,8 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
 
-      - name: Build and package
+      - name: Build and package (Unix)
+        if: runner.os != 'Windows'
         working-directory: waspc
         env:
           LC_ALL: C.UTF-8 # In some Docker containers the LOCALE is not UTF-8 by default
@@ -132,6 +147,15 @@ jobs:
           ./run build:all${{ matrix.env.static && ':static' || '' }}
           mkdir -p artifacts
           ./tools/make_binary_package.sh "artifacts/wasp-${{ matrix.env.name }}.tar.gz"
+
+      - name: Build and package (Windows)
+        if: runner.os == 'Windows'
+        working-directory: waspc
+        shell: bash
+        run: |
+          ./run build:all${{ matrix.env.static && ':static' || '' }}
+          mkdir -p artifacts
+          powershell -File ./tools/make_binary_package.ps1 "artifacts/wasp-${{ matrix.env.name }}.zip"
 
       - uses: actions/upload-artifact@v4
         with:
